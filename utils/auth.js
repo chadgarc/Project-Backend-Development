@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
 const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE || "2h" });
+    return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE || "7d" });
 };
 
 const protect = async (req, res, next) => {
@@ -25,7 +25,7 @@ const protect = async (req, res, next) => {
         // Attach user to request
         req.user = await User.findById(decoded.id).select('-password');
 
-        if(!req.user) return res.status(401).json({ success: false, message: "User no exist" })
+        if(!req.user) return res.status(401).json({ success: false, message: "User no longer exist" })
 
         // pass to the next handler
         next();
@@ -35,4 +35,4 @@ const protect = async (req, res, next) => {
     }
 }
 
-export default { generateToken, protect };
+export { generateToken, protect };
