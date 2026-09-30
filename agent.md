@@ -1,13 +1,15 @@
 # TaskMaster Backend API - Agent Checklist
 
 ## Project Overview
-Build a complete RESTful API for TaskMaster, a productivity application with user authentication, project management, and task management. Target score: **300/300**
+
+Build a complete RESTful API for TaskMaster, a productivity application with user authentication, project management, and task management.
 
 ---
 
 ## Phase 1: Planning & Setup (Foundation)
 
 ### Project Initialization
+
 - [ ] Create project directory and initialize with `npm init`
 - [ ] Install dependencies: `express`, `mongoose`, `bcrypt`, `jsonwebtoken`, `dotenv`
 - [ ] Create `.gitignore` excluding `node_modules` and `.env`
@@ -17,6 +19,7 @@ Build a complete RESTful API for TaskMaster, a productivity application with use
   - `JWT_SECRET` - Secure random string for JWT signing
 
 ### Modular Folder Structure
+
 ```
 project-root/
 ├── config/
@@ -40,49 +43,67 @@ project-root/
 ```
 
 ### Documentation
+
 - [ ] Create comprehensive `README.md` with:
   - Project description
   - API endpoint documentation (all routes with methods, paths, request/response examples)
   - Setup instructions
   - Environment variables needed
   - Authentication flow explanation
+  - `status` values (canonical + accepted aliases)
 
 ---
 
 ## Phase 2: Data Modeling (The Blueprint) - 30 pts
 
 ### User Model (`models/User.js`) - 20 pts (Password Security)
+
 - [ ] Fields: `username` (String, required, unique), `email` (String, required, unique), `password` (String, required)
 - [ ] **Pre-save hook**: Hash password using `bcrypt` with salt rounds ≥ 10
 - [ ] Method: `comparePassword(candidatePassword)` for login validation
 - [ ] Timestamps: `createdAt`, `updatedAt`
 
 ### Project Model (`models/Project.js`) - 30 pts (Relationships)
+
 - [ ] Fields: `name` (String, required), `description` (String), `user` (ObjectId, ref: 'User', required)
 - [ ] Virtual populate for tasks (optional but recommended)
 - [ ] Timestamps: `createdAt`, `updatedAt`
 
 ### Task Model (`models/Task.js`) - 30 pts (Relationships)
-- [ ] Fields: `title` (String, required), `description` (String), `status` (String, enum: ['To Do', 'In Progress', 'Done'], default: 'To Do'), `project` (ObjectId, ref: 'Project', required)
+
+- [ ] Fields: `title` (String, required), `description` (String), `status` (String, enum: ['To Do', 'In Progress', 'Done/Completed'], default: 'To Do'), `project` (ObjectId, ref: 'Project', required)
 - [ ] Timestamps: `createdAt`, `updatedAt`
+
+> **Design decision — `status` enum:** canonical values use spaceless slugs
+> (`todo`, `in_progress`, `completed`) instead of the literal values from the
+> prompt (`To Do`, `In Progress`, `Done/Completed`). To stay compatible with
+> tests/graders sending the spaced values, implement an alias in the schema
+> (setter or custom validation) mapping:
+> `To Do` → `todo`, `In Progress` → `in_progress`, `Done/Completed` → `completed`.
+>
+> - [ ] Implement setter/alias in `models/Task.js` accepting both forms
+> - [ ] Document canonical values + accepted aliases in `README.md`
 
 ---
 
 ## Phase 3: Authentication API (The Gatekeeper) - 40 pts
 
 ### Auth Middleware (`utils/auth.js`)
+
 - [ ] `protect` middleware: Verify JWT from Authorization header, attach `req.user`
 - [ ] Error handling: 401 for missing/invalid/expired tokens
 
 ### User Routes (`routes/api/userRoutes.js`) - 40 pts
 
 #### POST `/api/users/register` - 20 pts
+
 - [ ] Validate required fields (username, email, password)
 - [ ] Check for duplicate email → return 400
 - [ ] Create user (password hashed by pre-save hook)
 - [ ] Return 201 with user data (exclude password) + JWT token
 
 #### POST `/api/users/login` - 20 pts
+
 - [ ] Find user by email
 - [ ] Compare provided password with hashed password using `comparePassword`
 - [ ] On success: Generate JWT with user ID, expire in 7d/30d
@@ -98,15 +119,18 @@ project-root/
 #### All routes protected by `protect` middleware
 
 #### POST `/api/projects` - Create
+
 - [ ] Get user ID from `req.user.id`
 - [ ] Create project with `user: req.user.id`
 - [ ] Return 201 with created project
 
 #### GET `/api/projects` - Get All (User's only)
+
 - [ ] Query: `Project.find({ user: req.user.id })`
 - [ ] Return 200 with array of projects
 
 #### GET `/api/projects/:id` - Get One
+
 - [ ] Find project by ID
 - [ ] **Ownership check**: `project.user.toString() === req.user.id`
 - [ ] If not owner → 403 Forbidden
@@ -114,12 +138,14 @@ project-root/
 - [ ] Return 200 with project
 
 #### PUT `/api/projects/:id` - Update
+
 - [ ] Find project by ID
 - [ ] **Ownership check** (same as GET one)
 - [ ] Update allowed fields (name, description)
 - [ ] Return 200 with updated project
 
 #### DELETE `/api/projects/:id` - Delete
+
 - [ ] Find project by ID
 - [ ] **Ownership check** (same as GET one)
 - [ ] Delete project
@@ -135,6 +161,7 @@ project-root/
 #### All routes protected by `protect` middleware
 
 #### POST `/api/projects/:projectId/tasks` - Create Task
+
 - [ ] Verify project exists: `Project.findById(req.params.projectId)`
 - [ ] **Ownership check**: `project.user.toString() === req.user.id`
 - [ ] If not owner → 403 Forbidden
@@ -142,12 +169,14 @@ project-root/
 - [ ] Return 201 with created task
 
 #### GET `/api/projects/:projectId/tasks` - Get All Tasks
+
 - [ ] Verify project exists
 - [ ] **Ownership check** on parent project
 - [ ] Query: `Task.find({ project: req.params.projectId })`
 - [ ] Return 200 with array of tasks
 
 #### PUT `/api/tasks/:taskId` - Update Task
+
 - [ ] Find task by ID: `Task.findById(req.params.taskId).populate('project')`
 - [ ] **Complex authorization**: `task.project.user.toString() === req.user.id`
 - [ ] If not owner → 403 Forbidden
@@ -155,6 +184,7 @@ project-root/
 - [ ] Return 200 with updated task
 
 #### DELETE `/api/tasks/:taskId` - Delete Task
+
 - [ ] Find task by ID with populated project
 - [ ] **Complex authorization** (same as PUT)
 - [ ] Delete task
@@ -165,18 +195,21 @@ project-root/
 ## Security Requirements Checklist
 
 ### Authentication
+
 - [ ] JWT tokens signed with secure secret from `.env`
 - [ ] Tokens expire (recommended: 7-30 days)
 - [ ] Passwords **never** returned in responses
 - [ ] Passwords hashed with bcrypt (pre-save hook, not in route)
 
 ### Authorization
+
 - [ ] All project/task routes require valid JWT
 - [ ] Users can only access their own projects (403 if not owner)
 - [ ] Users can only access tasks in their own projects (403 if not owner)
 - [ ] No route allows cross-user data access
 
 ### Error Handling
+
 - [ ] Consistent error response format: `{ success: false, message: "..." }`
 - [ ] Proper HTTP status codes: 400, 401, 403, 404, 500
 - [ ] No stack traces leaked to client
@@ -187,6 +220,7 @@ project-root/
 ## Testing Checklist (Manual via Insomnia/Postman)
 
 ### Auth Tests
+
 - [ ] Register new user → 201, returns token
 - [ ] Register duplicate email → 400
 - [ ] Login with correct credentials → 200, returns token
@@ -196,6 +230,7 @@ project-root/
 - [ ] Access protected route with invalid token → 401
 
 ### Project Tests
+
 - [ ] Create project as User A → 201
 - [ ] Get all projects as User A → 200, shows only User A's projects
 - [ ] Get single project as owner → 200
@@ -206,6 +241,7 @@ project-root/
 - [ ] Delete project as non-owner → 403
 
 ### Task Tests
+
 - [ ] Create task in User A's project → 201
 - [ ] Create task in User B's project as User A → 403
 - [ ] Get tasks in User A's project → 200
@@ -216,6 +252,7 @@ project-root/
 - [ ] Delete task in other user's project → 403
 
 ### Edge Cases
+
 - [ ] GET/PUT/DELETE non-existent project → 404
 - [ ] GET/PUT/DELETE non-existent task → 404
 - [ ] Create task with invalid projectId → 404
@@ -249,21 +286,21 @@ project-root/
 
 ## Grading Rubric Mapping
 
-| Criteria | Points | Checklist Section |
-|----------|--------|-------------------|
-| Project Planning & Documentation | 10 | Phase 1 - Documentation |
-| Project Structure & Modularity | 15 | Phase 1 - Modular Folder Structure |
-| Configuration & Env Security | 15 | Phase 1 - Project Initialization |
-| Mongoose Schema Definition | 30 | Phase 2 - All Models |
-| Data Model Relationships (ref) | 30 | Phase 2 - Models (ref fields) |
-| Password Security (bcrypt) | 20 | Phase 2 - User Model pre-save hook |
-| User Registration Endpoint | 20 | Phase 3 - POST /register |
-| User Login & JWT Implementation | 20 | Phase 3 - POST /login |
-| Projects API: CRUD Functionality | 30 | Phase 4 - All 5 CRUD endpoints |
-| Projects API: Authorization | 40 | Phase 4 - Ownership checks |
-| Tasks API: CRUD Functionality | 30 | Phase 5 - All 4 CRUD endpoints |
-| Tasks API: Authorization | 40 | Phase 5 - Parent project ownership checks |
-| **TOTAL** | **300** | |
+| Criteria                         | Points  | Checklist Section                         |
+| -------------------------------- | ------- | ----------------------------------------- |
+| Project Planning & Documentation | 10      | Phase 1 - Documentation                   |
+| Project Structure & Modularity   | 15      | Phase 1 - Modular Folder Structure        |
+| Configuration & Env Security     | 15      | Phase 1 - Project Initialization          |
+| Mongoose Schema Definition       | 30      | Phase 2 - All Models                      |
+| Data Model Relationships (ref)   | 30      | Phase 2 - Models (ref fields)             |
+| Password Security (bcrypt)       | 20      | Phase 2 - User Model pre-save hook        |
+| User Registration Endpoint       | 20      | Phase 3 - POST /register                  |
+| User Login & JWT Implementation  | 20      | Phase 3 - POST /login                     |
+| Projects API: CRUD Functionality | 30      | Phase 4 - All 5 CRUD endpoints            |
+| Projects API: Authorization      | 40      | Phase 4 - Ownership checks                |
+| Tasks API: CRUD Functionality    | 30      | Phase 5 - All 4 CRUD endpoints            |
+| Tasks API: Authorization         | 40      | Phase 5 - Parent project ownership checks |
+| **TOTAL**                        | **300** |                                           |
 
 ---
 
