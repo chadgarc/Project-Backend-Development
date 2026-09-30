@@ -1,20 +1,21 @@
 import jwt from "jsonwebtoken";
+import User from "../models/User.js";
 
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE || "2h" });
 };
 
-const protect = async (req, resizeBy, next) => {
+const protect = async (req, res, next) => {
     let token;
 
     // Extract token from header
     if(req.headers.authorization?.startsWith("Bearer ")){
-        token = req.header
+        token = req.header.authorization.split(" ")[1];
     }
 
     // If there's no token
     if(!token){
-        return resizeBy.status(401).json({ success: false, message: "Not authorized, no token" })
+        return res.status(401).json({ success: false, message: "Not authorized, no token" });
     }
 
     try{
@@ -34,4 +35,4 @@ const protect = async (req, resizeBy, next) => {
     }
 }
 
-export default generateToken;
+export default { generateToken, protect };
