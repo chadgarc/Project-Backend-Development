@@ -76,3 +76,27 @@ router.put("/:id", async (req, res) => {
         return res.status(400).json({ success: false, message: error.message });
     }
 })
+
+// Get one
+router.get("/:id", async (req, res) => {
+    try{
+        // Get project
+        const project = await Project.findById(req.params.id);
+
+        // Verify project exists
+        if(!project)
+            return res.status(404).json({ success: false, message: "Project not found." });
+        
+        // Verify user owns project
+        if(project.user.toString() !== req.user.id)
+            return res.status(403).json({ success: false, message: "Not authorized" });
+        
+        // Return project
+        res.status(200).json({ success: true, project });
+    }catch(error){
+        console.error(error);
+        if(error.name === "CastError")
+            return res.status(400).json({ success: false, message: "Invalid project ID." });
+        return res.status(400).json({ success: false, message: error.message });
+    }
+})
