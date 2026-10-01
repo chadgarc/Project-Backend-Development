@@ -14,6 +14,7 @@
 
 - [Tech Stack](#-tech-stack)
 - [Getting Started](#-getting-started)
+- [Project Structure](#-project-structure)
 - [Authentication Flow](#-authentication-flow)
 - [Task Status Values](#-task-status-values)
 - [API Endpoints](#-api-endpoints)
@@ -22,7 +23,6 @@
   - [Tasks](#tasks)
 - [Error Handling](#-error-handling)
 - [Testing with Postman](#-testing-with-postman)
-- [Project Structure](#-project-structure)
 
 ---
 
@@ -66,7 +66,29 @@ JWT_EXPIRE=7d
 npm start   # node server.js
 ```
 
-Server → `http://localhost:3001`, API base → `/api`
+Server → `http://localhost:3000`, API base → `/api`
+
+---
+
+## 🗂 Project Structure
+
+```
+├── config/connection.js     # MongoDB connection (side-effect import)
+├── models/
+│   ├── User.js              # username/email/password + bcrypt pre-save hook
+│   ├── Project.js           # name/description + ref → User
+│   └── Task.js              # title/description/status(setter+enum) + ref → Project
+├── routes/
+│   ├── index.js             # mounts /users, /projects, /tasks under /api
+│   └── api/
+│       ├── userRoutes.js    # register + login (public)
+│       ├── projectRoutes.js # 5 project CRUD + 2 nested task routes (protect)
+│       └── taskRoutes.js    # PUT/DELETE task via parent ownership (protect)
+├── utils/auth.js            # generateToken + protect middleware
+├── server.js                # dotenv → json parser → routes → 404 → listen
+├── agent.md                 # build checklist & design decisions
+└── README.md                # you are here 📍
+```
 
 ---
 
@@ -107,10 +129,10 @@ Protected routes require `Authorization: Bearer <token>`.
 
 ### Users
 
-| Method | Path                  | Auth | Description       |
-| ------ | --------------------- | ---- | ----------------- |
-| POST   | `/api/users/register` | ❌   | Register new user |
-| POST   | `/api/users/login`    | ❌   | Login, get token  |
+| Method | Path                  | Description       |
+| ------ | --------------------- | ----------------- |
+| POST   | `/api/users/register` | Register new user |
+| POST   | `/api/users/login`    | Login, get token  |
 
 **POST `/api/users/register`** → `201`
 
@@ -257,24 +279,96 @@ Set a `{{token}}` environment variable from the login response and send it as `A
 10. `DELETE /api/tasks/:taskId` — B → `403`, then A → `200`
 11. `DELETE /api/projects/:id` — A → `200`; verify cascade (tasks gone)
 
----
+### 🎬 End-to-End Scenario (copy-paste in order)
 
-## 🗂 Project Structure
+> Save IDs as you go: `{{tokenA}}`, `{{tokenB}}`, `{{project1}}`, `{{project2}}`, `{{task1}}`, `{{task2}}`, `{{task3}}`.
 
+**Step 1 — Register User A** · `POST /api/users/register` → `201`
+
+```json
+{
+  "username": "alice",
+  "email": "alice@test.com",
+  "password": "password123"
+}
 ```
-├── config/connection.js     # MongoDB connection (side-effect import)
-├── models/
-│   ├── User.js              # username/email/password + bcrypt pre-save hook
-│   ├── Project.js           # name/description + ref → User
-│   └── Task.js              # title/description/status(setter+enum) + ref → Project
-├── routes/
-│   ├── index.js             # mounts /users, /projects, /tasks under /api
-│   └── api/
-│       ├── userRoutes.js    # register + login (public)
-│       ├── projectRoutes.js # 5 project CRUD + 2 nested task routes (protect)
-│       └── taskRoutes.js    # PUT/DELETE task via parent ownership (protect)
-├── utils/auth.js            # generateToken + protect middleware
-├── server.js                # dotenv → json parser → routes → 404 → listen
-├── agent.md                 # build checklist & design decisions
-└── README.md                # you are here 📍
+
+Repeat for User B (`bob` / `bob@test.com`), save both tokens.
+
+**Step 2 — Login User A** · `POST /api/users/login` → `200`
+
+```json
+{
+  "email": "alice@test.com",
+  "password": "password123"
+}
 ```
+
+**Step 3 — Create Project 1 (Alice)** · `POST /api/projects` (`Bearer {{tokenA}}`) → `201`
+
+```json
+{
+  "name": "Website Redesign",
+  "description": "Q4 homepage overhaul"
+}
+```
+
+Save `_id` as `{{project1}}`.
+
+**Step 4 — Create Project 2 (Alice)** · `POST /api/projects` (`Bearer {{tokenA}}`) → `201`
+
+```json
+{
+  "name": "Mobile App",
+  "description": "iOS and Android MVP"
+}
+```
+
+Save `_id` as `{{project2}}`.
+
+**Step 5 — Create 2 tasks in Project 1** · `POST /api/projects/{{project1}}/tasks` (`Bearer {{tokenA}}`) → `201`
+
+```json
+{
+  "title": "Design mockups",
+  "description": "Figma first draft",
+  "status": "todo"
+}
+```
+
+Save as `{{task1}}`. Then:
+
+```json
+{
+  "title": "Write copy",
+  "description": "Hero section text",
+  "status": "To Do"
+}
+```
+
+Save as `{{task2}}` (tests the `To Do` → `todo` alias).
+
+**Step 6 — Create 1 task in Project 2** · `POST /api/projects/{{project2}}/tasks` (`Bearer {{tokenA}}`) → `201`
+
+```json
+{
+  "title": "Setup repo",
+  "description": "Init React Native",
+  "status": "in_progress"
+}
+```
+
+Save as `{{task3}}`.
+
+**Step 7 — Delete a single task** · `DELETE /api/tasks/{{task2}}` (`Bearer {{tokenA}}`) → `200`
+
+Verify: `GET /api/projects/{{project1}}/tasks` lists only `{{task1}}` — the sibling survives.
+
+**Step 8 — Delete Project 2 with cascade** · `DELETE /api/projects/{{project2}}` (`Bearer {{tokenA}}`) → `200`
+
+Verify cascade: `GET /api/projects/{{project2}}/tasks` → `404` (parent gone, `{{task3}}` deleted with it).
+
+**Step 9 — Cross-user security** · all with `Bearer {{tokenB}}` → `403`
+
+- `GET /api/projects/{{project1}}`
+- `DELETE /api/tasks/{{task1}}`
