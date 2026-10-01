@@ -115,8 +115,11 @@ router.delete("/:id", async (req, res) => {
         if(project.user.toString() !== req.user.id)
             return res.status(403).json({ success: false, message: "Not authorized" });
         
+        // Delete all tasks associated with the project
+        await Task.deleteMany({ project: project._id });
+        
         // Delete project
-        await Project.deleteOne({ _id: req.params.id });
+        await project.deleteOne();
         
         res.status(200).json({ success: true, message: "Project deleted successfully" });
     } catch (error) {
