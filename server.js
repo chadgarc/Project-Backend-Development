@@ -1,15 +1,25 @@
-import routes from "./routes/index.js";
 import dotenv from "dotenv";
-import mongoose from "./config/connection.js";
-
 dotenv.config();
 
-const app = express();
+import express from "express";
+import routes from "./routes/index.js";
+import "./config/connection.js";
 
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// middleware for parsing JSON
 app.use(express.json());
 
-app.use("/api",routes);
+// routes
+app.use("/api", routes);
 
-app.listen(process.env.PORT, () => {
-    console.log(`Server running on port ${process.env.PORT}`);
+// 404 handler
+app.use((req, res) => {
+    return res.status(404).json({ success: false, message: "Route not found" });
+});
+
+// Start server
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
 });

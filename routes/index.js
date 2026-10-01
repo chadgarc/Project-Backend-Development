@@ -6,7 +6,7 @@ import projectRoutes from "./api/projectRoutes.js"
 const router = express.Router();
 
 router.use("/users", userRoutes)
-router.use("/tasks", taskRoutes)
-router.use("/projects", projectRoutes)
+// router.use("/tasks", taskRoutes)
+// router.use("/projects", projectRoutes)
 
 export default router;
