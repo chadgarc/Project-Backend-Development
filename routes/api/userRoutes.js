@@ -45,7 +45,30 @@ router.post("/register", async(req, res) => {
 
 // Post - login user
 router.post("/login", async(req, res) => {
+    try{
+        const { email, password } = req.body;
 
+        // Validation
+        if(!email || !password){
+            return res.status(400).json({ success: false, message: "Please provide all fields" });
+        }
+
+        // Check if user exists
+        const user = await User.findOne({ email });
+        if(!user || !(await user.isCorrectPassword(password))){
+            return res.status(401).json({ success: false, message: "Invalid credentials" });
+        }
+
+        // Generate token
+        const token = generateToken(user._id);
+
+        // Respond with generated token
+        return res.status(200).json({ success: true, token, user: { id: user._id, username: user.username, email: user.email } });
+    }catch(error){
+        console.error(error);
+        return res.status(400).json({ success: false, message: error.message });
+        
+    }
 })
 
 export default router;
