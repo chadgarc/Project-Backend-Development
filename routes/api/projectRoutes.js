@@ -129,3 +129,42 @@ router.delete("/:id", async (req, res) => {
         return res.status(400).json({ success: false, message: error.message });
     }
 })
+
+// Post and Get tasks are nested inside projects, so tasks will be like /api/projects/:projectId/tasks
+
+// Create Task
+router.post('/:projectId/tasks', async (req, res) => {
+    try{
+        // Get project, to verify parent exist
+        const project = await Project.findById(req.params.projectId);
+
+        if (!project) return res.status(404).json({ success: false, message: "Project not found" });
+
+        // Verify user owns project
+        if(project.user.toString() !== req.user.id)
+            return res.status(403).json({ success: false, message: "Not authorized" });
+        
+        const { title, description, status } = req.body;
+
+        // Validate
+        if(!title){
+            return res.status(400).json({ success: false, message: "Please provide title field." });
+        }
+        
+
+        // Create task
+        const task = await Task.create({
+            title,
+            description: description || "",
+            project: projectId,
+            status: status || "todo",
+        })
+
+        res.status(201).json({ success: true, task });
+    }catch(error){
+        console.error(error);
+        if(error.name === "CastError")
+            return res.status(400).json({ success: false, message: "Invalid project ID." });
+        return res.status(400).json({ success: false, message: error.message });
+    }
+})
