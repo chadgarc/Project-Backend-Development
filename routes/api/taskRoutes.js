@@ -14,16 +14,14 @@ router.put("/:taskId", async (req,res) => {
 
         if (!task) return res.status(404).json({ success: false, message: "Task not found" });
 
+        if(!task.project) 
+            return res.status(404).json({ success: false, message: "Project not found" });
+
         // Verify user owns task
         if(task.project.user.toString() !== req.user.id)
             return res.status(403).json({ success: false, message: "Not authorized" });
         
         const { title, description, status } = req.body;
-
-        // Validate
-        if(!title){
-            return res.status(400).json({ success: false, message: "Please provide title field." });
-        }
         
         // Update task
         task.title = title ?? task.title;
@@ -46,6 +44,9 @@ router.delete("/:taskId", async (req,res) => {
         const task = await Task.findById(req.params.taskId).populate("project");
 
         if (!task) return res.status(404).json({ success: false, message: "Task not found" });
+
+        if(!task.project) 
+            return res.status(404).json({ success: false, message: "Project not found" });
 
         // Verify user owns task
         if(task.project.user.toString() !== req.user.id)
