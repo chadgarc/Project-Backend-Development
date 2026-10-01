@@ -1,7 +1,7 @@
 import express from "express";
 import userRoutes from "./api/userRoutes.js"
-import taskRoutes from "./api/taskRoutes.js"
-import projectRoutes from "./api/projectRoutes.js"
+// import taskRoutes from "./api/taskRoutes.js"
+// import projectRoutes from "./api/projectRoutes.js"
 
 const router = express.Router();
 
