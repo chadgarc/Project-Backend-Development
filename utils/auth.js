@@ -6,11 +6,12 @@ const generateToken = (id) => {
 };
 
 const protect = async (req, res, next) => {
+    try{
     let token;
 
     // Extract token from header
     if(req.headers.authorization?.startsWith("Bearer ")){
-        token = req.header.authorization.split(" ")[1];
+        token = req.headers.authorization.split(" ")[1];
     }
 
     // If there's no token
@@ -18,19 +19,18 @@ const protect = async (req, res, next) => {
         return res.status(401).json({ success: false, message: "Not authorized, no token" });
     }
 
-    try{
         // Verify token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         // Attach user to request
         req.user = await User.findById(decoded.id).select('-password');
 
-        if(!req.user) return res.status(401).json({ success: false, message: "User no longer exist" })
+        if(!req.user) return res.status(401).json({ success: false, message: "User not found" })
 
         // pass to the next handler
         next();
     } catch(error){
-        console.log(error)
+        console.error(error);
         return res.status(401).json({ success: false, message: "Not authorized, token failed" })
     }
 }
